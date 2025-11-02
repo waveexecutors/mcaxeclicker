@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Minecraft Axe Clicker Ultimate</title>
+<style>
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg, #67b7f7, #4cc2ff);
+  color: white;
+  text-align: center;
+  overflow: hidden;
+  transition: background 1s;
+}
+h1 { margin-top: 20px; }
+#coins { font-size: 26px; margin-top: 12px; }
+#axe {
+  width: 200px;
+  cursor: pointer;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.7));
+  animation: idleFloat 3s ease-in-out infinite;
+}
+@keyframes idleFloat {
+  0%,100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg) scale(0.9); }
+  to { transform: rotate(360deg) scale(1); }
+}
+button {
+  padding: 10px 18px;
+  margin: 6px;
+  background: #222;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+button:hover { background: #444; }
+#fps {
+  position: fixed; top: 10px; left: 10px;
+  background: rgba(0,0,0,0.4);
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.particle {
+  position: absolute;
+  font-weight: bold;
+  color: gold;
+  text-shadow: 0 0 5px black;
+  pointer-events: none;
+  animation: floatUp 1s ease-out forwards;
+}
+@keyframes floatUp {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-60px); }
+}
+
+/* Popups */
+.popup {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  background: rgba(0,0,0,0.85);
+  border-radius: 16px;
+  padding: 20px;
+  width: 80%;
+  max-width: 500px;
+  transition: 0.3s ease;
+  z-index: 10;
+  color: white;
+}
+.popup.active { transform: translate(-50%, -50%) scale(1); }
+.popup h2 { margin-top: 0; }
+.closeBtn { background: #f33; }
+
+/* Halloween storm */
+.bat, .pumpkin, .orangeFlash, .fogWave { position:absolute; pointer-events:none; }
+.bat { width: 40px; animation: batFly linear infinite; }
+@keyframes batFly {
+  0% { transform: translateX(-50px) translateY(0) rotate(0deg); opacity: 0; }
+  10% { opacity:1; }
+  50% { transform: translateX(100vw) translateY(-20px) rotate(180deg); }
+  90% { opacity:1; }
+  100% { transform: translateX(100vw) translateY(0) rotate(360deg); opacity:0; }
+}
+.pumpkin { width:50px; animation: pumpkinFloat linear infinite; }
+@keyframes pumpkinFloat {
+  0% { transform: translateY(100vh) translateX(0); opacity:0; }
+  10% { opacity:1; }
+  100% { transform: translateY(-50px) translateX(100vw); opacity:0; }
+}
+.orangeFlash {
+  width:100%; height:100%; top:0; left:0;
+  background: rgba(255,100,0,0.3);
+  pointer-events:none;
+  animation: flashBlink 0.5s ease-out forwards;
+}
+@keyframes flashBlink {
+  0% { opacity: 0; }
+  50% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+.fogWave {
+  width:100%; height:100%; top:0; left:0;
+  background: radial-gradient(circle, rgba(255,140,0,0.15) 0%, transparent 70%);
+  animation: fogDrift 6s linear infinite;
+}
+@keyframes fogDrift {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+/* Enchanted glow */
+#axe.enchanted { filter: drop-shadow(0 0 15px gold) drop-shadow(0 0 20px cyan); }
+
+/* Monster */
+.monster {
+  position:absolute;
+  width:80px;
+  transition: left 0.05s linear, top 0.05s linear;
+  cursor:pointer;
+}
+
+/* Boss */
+#bossHealthContainer {
+  position:fixed;
+  top:10px; left:50%; transform:translateX(-50%);
+  width:400px; height:20px;
+  background:#222; border-radius:10px; overflow:hidden;
+  display:none; z-index:15;
+}
+#bossHealthBar { height:100%; width:100%; background:red; }
+</style>
+</head>
+<body>
+
+<h1>Minecraft Axe Clicker 🔨 Enchanted Ultimate</h1>
+<div id="fps">FPS: --</div>
+<img id="axe" src="https://minecraft.wiki/images/Wooden_Axe_JE2_BE2.png?ff0b9" alt="Axe">
+<div id="coins">Coins: 0</div>
+
+<div>
+  <button id="openAxeShop">🪓 Axe Shop</button>
+  <button id="openClickShop">💪 Click Upgrades</button>
+  <button id="openEnchantShop">✨ Enchantments</button>
+  <button id="openMusicPopup">🎵 Music</button>
+</div>
+
+<div class="settings">
+  <button id="toggleHalloween">🎃 Halloween Mode</button>
+  <button id="revertTheme">🌤 Normal Mode</button>
+  <button id="saveGame">💾 Save Config</button>
+  <button id="loadGame">📂 Load Config</button>
+  <input type="file" id="fileLoader" style="display:none;">
+</div>
+
+<!-- Popups -->
+<div id="axeShopPopup" class="popup">
+  <h2>Axe Shop</h2>
+  <div id="axeShop"></div>
+  <button class="closeBtn" onclick="closePopup('axeShopPopup')">Close</button>
+</div>
+
+<div id="clickShopPopup" class="popup">
+  <h2>Click Upgrades</h2>
+  <button id="upgradeClick">Upgrade (+1 Click Power) - Cost: 50</button>
+  <button class="closeBtn" onclick="closePopup('clickShopPopup')">Close</button>
+</div>
+
+<div id="enchShopPopup" class="popup">
+  <h2>Enchantments</h2>
+  <div id="enchShop"></div>
+  <button class="closeBtn" onclick="closePopup('enchShopPopup')">Close</button>
+</div>
+
+<div id="musicPopup" class="popup">
+  <h2>Select Music</h2>
+  <div id="musicList"></div>
+  <button class="closeBtn" onclick="closePopup('musicPopup')">Close</button>
+</div>
+
+<div id="notification" class="popup" style="width:auto; max-width:250px;"></div>
+
+<div id="bossHealthContainer">
+  <div id="bossHealthBar"></div>
+</div>
+
+<!-- Sounds -->
+<audio id="clickSound" src="https://actions.google.com/sounds/v1/foley/rake_swing_whoosh_close.ogg"></audio>
+<audio id="upgradeSound" src="https://actions.google.com/sounds/v1/weapons/big_explosion_cut_off.ogg"></audio>
+<audio id="shopSound" src="https://actions.google.com/sounds/v1/cartoon/cartoon_boing.ogg"></audio>
+
+<!-- Background music -->
+<audio id="dayMusic" loop src="https://lambda.vgmtreasurechest.com/soundtracks/minecraft/axjbhfgq/1-01.%20Key.mp3"></audio>
+<audio id="halloweenSong" loop src="https://lambda.vgmtreasurechest.com/soundtracks/minecraft/sgbpufpl/1-07.%20Haggstrom.mp3"></audio>
+
+<script>
+let coins=0, clickPower=1, currentAxe=0, halloween=false, musicOn=true, currentMusic;
+let dayTime=true, nightTime=false, monsters=[], bossActive=false, bossHealth=4000;
+const fpsElem=document.getElementById("fps"), axe=document.getElementById("axe"), coinElem=document.getElementById("coins");
+const clickSound=document.getElementById("clickSound"), upgradeSound=document.getElementById("upgradeSound"), shopSound=document.getElementById("shopSound");
+const halloweenSong=document.getElementById("halloweenSong"), dayMusic=document.getElementById("dayMusic");
+
+const axeData=[
+  { name:"Wooden Axe", cost:0, src:"https://minecraft.wiki/images/Wooden_Axe_JE2_BE2.png?ff0b9" },
+  { name:"Stone Axe", cost:200, src:"https://minecraft.wiki/images/Stone_Axe_JE2_BE2.png?d33a8" },
+  { name:"Golden Axe", cost:500, src:"https://minecraft.wiki/images/Golden_Axe_JE3_BE2.png?2e133" },
+  { name:"Diamond Axe", cost:1500, src:"https://minecraft.wiki/images/Diamond_Axe_JE3_BE3.png?99125" },
+  { name:"Netherite Axe", cost:5000, src:"https://minecraft.wiki/images/Netherite_Axe_JE2.png?52d88" }
+];
+
+let enchantments=[
+  { name:"Sharpness", desc:"+2 coins per click", cost:300, bought:false },
+  { name:"Fortune", desc:"Chance for +10 bonus coins", cost:600, bought:false },
+  { name:"Efficiency", desc:"Faster spin speed", cost:800, bought:false },
+  { name:"Unbreaking", desc:"10% chance to double click gain", cost:1000, bought:false }
+];
+let enchants={sharpness:false, fortune:false, efficiency:false, unbreaking:false};
+
+// Monster sprites
+const monsterSprites=[
+  "https://pt.minecraft.wiki/images/UpdatedZombie.png?a4ca8",
+  "https://static.wikia.nocookie.net/minecraft_gamepedia/images/4/47/Skeleton_JE6_BE4.png/revision/latest?cb=20210227130136",
+  "https://upload.wikimedia.org/wikipedia/en/4/49/Creeper_%28Minecraft%29.png"
+];
+const bossSprite="https://minecraft.wiki/images/Charged_Creeper_Animated.gif?6644a";
+
+// ---- Helper functions ----
+function updateCoins(){ coinElem.textContent=`Coins: ${coins}`; }
+function showNotification(msg){ 
+  const note=document.getElementById("notification");
+  note.textContent=msg;
+  note.classList.add("active");
+  setTimeout(()=>note.classList.remove("active"),2000);
+}
+
+// Popups
+function openPopup(id){ document.getElementById(id).classList.add("active"); }
+function closePopup(id){ document.getElementById(id).classList.remove("active"); }
+
+// Axe shop
+function updateAxeShop(){
+  const shop=document.getElementById("axeShop"); shop.innerHTML="";
+  axeData.forEach((axeItem,i)=>{
+    const btn=document.createElement("button");
+    btn.innerText=`${axeItem.name} - ${axeItem.cost} Coins`;
+    btn.disabled=(i<=currentAxe);
+    btn.onclick=()=>{ 
+      if(coins>=axeItem.cost){ coins-=axeItem.cost; currentAxe=i; axe.src=axeItem.src; shopSound.play(); updateCoins(); updateAxeShop(); showNotification(`You bought ${axeItem.name}`); } 
+      else alert("Not enough coins!"); 
+    };
+    shop.appendChild(btn);
+  });
+}
+
+// Enchant shop
+function updateEnchShop(){
+  const shop=document.getElementById("enchShop"); shop.innerHTML="";
+  enchantments.forEach((ench)=>{
+    const btn=document.createElement("button");
+    btn.innerText=`${ench.name} (${ench.desc}) - ${ench.cost}`;
+    btn.disabled=ench.bought;
+    btn.onclick=()=>{ 
+      if(coins>=ench.cost){ coins-=ench.cost; ench.bought=true; enchants[ench.name.toLowerCase()]=true; upgradeSound.play(); updateCoins(); updateEnchShop(); updateAxeGlow(); showNotification(`You bought ${ench.name}`); } 
+      else alert("Not enough coins!"); 
+    };
+    shop.appendChild(btn);
+  });
+}
+
+function updateAxeGlow(){ if(Object.values(enchants).some(e=>e)) axe.classList.add("enchanted"); else axe.classList.remove("enchanted"); }
+
+// ---- Axe click ----
+axe.onclick=(e)=>{
+  let gain=clickPower;
+  if(enchants.sharpness) gain+=2;
+  if(enchants.unbreaking && Math.random()<0.1) gain*=2;
+  if(enchants.fortune && Math.random()<0.15) gain+=10;
+  coins+=gain;
+  axe.style.animation="spin "+(enchants.efficiency?"0.2s":"0.4s")+" linear";
+  clickSound.currentTime=0; clickSound.play();
+  spawnParticle(e.clientX,e.clientY,`+${gain}`);
+  updateCoins();
+  setTimeout(()=>axe.style.animation="idleFloat 3s ease-in-out infinite",400);
+  if(halloween) spawnHalloweenParticles();
+};
+
+// ---- Particles ----
+function spawnParticle(x,y,text){
+  const p=document.createElement("div"); p.className="particle"; p.innerText=text;
+  p.style.left=(x-20)+"px"; p.style.top=(y-20)+"px"; document.body.appendChild(p);
+  setTimeout(()=>p.remove(),1000);
+}
+
+// ---- Halloween ----
+document.getElementById("toggleHalloween").onclick=()=>{
+  halloween=true;
+  document.body.style.background="linear-gradient(135deg, #300, #000)";
+  if(musicOn){ stopAllMusic(); halloweenSong.play(); currentMusic=halloweenSong; }
+};
+document.getElementById("revertTheme").onclick=()=>{
+  halloween=false;
+  document.body.style.background="linear-gradient(135deg, #67b7f7, #4cc2ff)";
+  if(musicOn){ stopAllMusic(); dayMusic.play(); currentMusic=dayMusic; }
+};
+function stopAllMusic(){ [dayMusic,halloweenSong].forEach(m=>{m.pause(); m.currentTime=0;}); }
+currentMusic=dayMusic; currentMusic.play();
+
+// Halloween storm
+function spawnHalloweenParticles(){
+  if(Math.random()<0.4){ const bat=document.createElement("img"); bat.src="https://static.wikia.nocookie.net/minecraft_gamepedia/images/f/f0/Bat_JE1_BE1.png/revision/latest?cb=20190815032715"; bat.className="bat"; bat.style.top=Math.random()*50+"vh"; bat.style.left="-50px"; bat.style.animationDuration=(3+Math.random()*3)+"s"; document.body.appendChild(bat); setTimeout(()=>bat.remove(),6000);}
+  if(Math.random()<0.3){ const p=document.createElement("img"); p.src="https://minecraft.wiki/images/Carved_Pumpkin_%28N%29_JE5.png?32a4a"; p.className="pumpkin"; p.style.left=Math.random()*80+"vw"; p.style.animationDuration=(4+Math.random()*3)+"s"; document.body.appendChild(p); setTimeout(()=>p.remove(),7000);}
+  if(Math.random()<0.2){ const flash=document.createElement("div"); flash.className="orangeFlash"; document.body.appendChild(flash); setTimeout(()=>flash.remove(),500);}
+  if(Math.random()<0.3){ const fog=document.createElement("div"); fog.className="fogWave"; document.body.appendChild(fog); setTimeout(()=>fog.remove(),6000);}
+}
+
+// ---- Upgrade click ----
+document.getElementById("upgradeClick").onclick=()=>{
+  const cost=50*clickPower;
+  if(coins>=cost){ coins-=cost; clickPower++; upgradeSound.play(); updateCoins(); document.getElementById("upgradeClick").innerText=`Upgrade (+1 Click Power) - Cost: ${50*clickPower}`; showNotification(`You upgraded click power!`);} else alert("Not enough coins!");
+};
+
+// ---- Popups ----
+document.getElementById("openAxeShop").onclick=()=>openPopup("axeShopPopup");
+document.getElementById("openClickShop").onclick=()=>openPopup("clickShopPopup");
+document.getElementById("openEnchantShop").onclick=()=>openPopup("enchShopPopup");
+document.getElementById("openMusicPopup").onclick=()=>openPopup("musicPopup");
+
+// ---- Music ----
+const musicTracks=[
+  {name:"Door", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/kerttmek/1-02.%20Door.mp3"},
+  {name:"Subwoofer Lullaby", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/opiwjgbq/1-03.%20Subwoofer%20Lullaby.mp3"},
+  {name:"Death", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/yvidsfvn/1-04.%20Death.mp3"},
+  {name:"Living Mice", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/dcemwzhl/1-05.%20Living%20Mice.mp3"},
+  {name:"Key", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/axjbhfgq/1-01.%20Key.mp3"},
+  {name:"Minecraft", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/ikyqfeel/1-08.%20Minecraft.mp3"},
+  {name:"Dry Hands", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/ghrnncxh/1-12.%20Dry%20Hands.mp3"},
+  {name:"Wet Hands", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/rlfsaxnv/1-13.%20Wet%20Hands.mp3"},
+  {name:"Mice on Venus", src:"https://lambda.vgmtreasurechest.com/soundtracks/minecraft/qtwapxrq/1-11.%20Mice%20on%20Venus.mp3"}
+];
+const musicListDiv=document.getElementById("musicList");
+musicTracks.forEach(track=>{
+  const btn=document.createElement("button");
+  btn.innerText=track.name;
+  btn.onclick=()=>{
+    stopAllMusic();
+    const newMusic=new Audio(track.src);
+    newMusic.loop=true;
+    newMusic.play();
+    currentMusic=newMusic;
+    musicOn=true;
+  };
+  musicListDiv.appendChild(btn);
+});
+
+// ---- FPS ----
+let lastFrame=performance.now(), frames=0;
+function measureFPS(now){ frames++; if(now-lastFrame>=1000){ fpsElem.textContent=`FPS: ${frames}`; frames=0; lastFrame=now; } requestAnimationFrame(measureFPS); }
+requestAnimationFrame(measureFPS);
+
+// ---- Day/Night cycle ----
+setInterval(()=>{
+  dayTime=!dayTime;
+  nightTime=!nightTime;
+  document.body.style.background=nightTime?"linear-gradient(135deg, #000, #300)":"linear-gradient(135deg, #67b7f7, #4cc2ff)";
+  if(nightTime) startNight(); else endNight();
+}, 60000); // 1 min day/night for testing
+
+// ---- Monster system ----
+function getAxeCenter(){ const r=axe.getBoundingClientRect(); return {x:r.left+r.width/2, y:r.top+r.height/2}; }
+
+function spawnMonsterNearAxe(){
+  if(bossActive) return;
+  const mon=document.createElement("img");
+  mon.src=monsterSprites[Math.floor(Math.random()*monsterSprites.length)];
+  mon.className="monster";
+  const axePos=getAxeCenter();
+  const offsetX=(Math.random()-0.5)*200;
+  const offsetY=(Math.random()-0.5)*200;
+  let x=axePos.x+offsetX;
+  let y=axePos.y+offsetY;
+  x=Math.max(0, Math.min(window.innerWidth-80, x));
+  y=Math.max(0, Math.min(window.innerHeight-80, y));
+  mon.style.left=x+"px";
+  mon.style.top=y+"px";
+  document.body.appendChild(mon);
+  monsters.push({elem:mon, health:100, attackCooldown:0});
+}
+
+// Move monsters toward axe
+function moveMonsters(){
+  monsters.forEach((m,index)=>{
+    const axePos=getAxeCenter();
+    const monRect=m.elem.getBoundingClientRect();
+    let dx=axePos.x-(monRect.left+monRect.width/2);
+    let dy=axePos.y-(monRect.top+monRect.height/2);
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist>50){
+      const step=1.5;
+      m.elem.style.left=(monRect.left+dx/dist*step)+"px";
+      m.elem.style.top=(monRect.top+dy/dist*step)+"px";
+    } else { /* attacking */ }
+    m.attackCooldown--;
+  });
+  requestAnimationFrame(moveMonsters);
+}
+requestAnimationFrame(moveMonsters);
+
+// Click monster to kill
+document.body.addEventListener("click",e=>{
+  monsters.forEach((m,i)=>{
+    const rect=m.elem.getBoundingClientRect();
+    if(e.clientX>=rect.left && e.clientX<=rect.right && e.clientY>=rect.top && e.clientY<=rect.bottom){
+      m.health-=clickPower*10;
+      if(m.health<=0){ m.elem.remove(); monsters.splice(i,1); coins+=50; updateCoins(); showNotification("Monster defeated!"); }
+    }
+  });
+});
+
+// ---- Night events ----
+function startNight(){
+  setInterval(spawnMonsterNearAxe,2000);
+}
+function endNight(){
+  monsters.forEach(m=>m.elem.remove());
+  monsters=[];
+}
+
+// ---- Initial setup ----
+updateAxeShop();
+updateEnchShop();
+updateCoins();
+</script>
+
+</body>
+</html>
